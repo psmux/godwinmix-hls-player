@@ -1,0 +1,7 @@
+{
+  "id": "hls-player/embed",
+  "title": "HLS Player",
+  "slots": ["main", "sidebar"],
+  "tier": "trusted",
+  "height": 520
+}

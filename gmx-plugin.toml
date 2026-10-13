@@ -1,0 +1,22 @@
+# hls-player: put a GodwinMix watch link, or any HLS stream, on a website.
+#
+# There is no process here. The plugin is a panel in the mixer's page and a
+# player in ui/ that the panel previews with and that any site can embed,
+# from GitHub Pages or from a copy of the ui folder.
+
+[plugin]
+name = "hls-player"
+version = "1.0.0"
+api = 1
+description = "An HLS player any website can embed with an iframe or a script tag, and a panel that lists the mixer's channel watch links, previews each one and copies the embed code."
+license = "MIT"
+authors = ["psmux"]
+repository = "https://github.com/psmux/godwinmix-hls-player"
+platforms = ["linux-x86_64", "linux-aarch64", "macos-aarch64", "macos-x86_64", "windows-x86_64"]
+placements = ["in-process"]
+
+[[provides]]
+kind = "panel"
+id = "embed"
+panel = { kind = "custom-element", entry = "ui/panel.js", slots = ["main", "sidebar"] }
+skill = "skills/panel/SKILL.md"
