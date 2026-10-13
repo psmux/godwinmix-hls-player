@@ -8,7 +8,7 @@
 // this plugin installed in that mixer. tests/live/README.md says how to get
 // there. It exits non zero on the first check that fails.
 
-import { launch, open, sleep } from "./cdp.mjs";
+import { launch, open, sleep, stop } from "./cdp.mjs";
 import { serve } from "./serve.mjs";
 import { fileURLToPath } from "node:url";
 import { dirname, join, resolve } from "node:path";
@@ -193,7 +193,7 @@ try {
   report(false, "the live check ran", e.stack || e.message);
 } finally {
   if (server) server.close();
-  browser.kill();
+  stop(browser);
 }
 console.log(failed ? `${failed} check(s) failed` : "every live check passed");
 process.exit(failed ? 1 : 0);

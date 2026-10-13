@@ -2,7 +2,7 @@
 // and take a picture, over the WebSocket node 22 and later has built in. No
 // dependency, so the live check needs only node and a Chrome or Edge.
 
-import { spawn } from "node:child_process";
+import { spawn, spawnSync } from "node:child_process";
 import { mkdirSync, writeFileSync } from "node:fs";
 
 export const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
@@ -25,6 +25,15 @@ export function launch(binary, port, profile) {
   ];
   const child = spawn(binary, args, { stdio: "ignore" });
   return child;
+}
+
+/**
+ * Stop the browser and every process it started. On Windows killing the
+ * parent leaves its renderers and GPU process running, so the tree goes.
+ */
+export function stop(child) {
+  if (process.platform === "win32") spawnSync("taskkill", ["/PID", String(child.pid), "/T", "/F"], { stdio: "ignore" });
+  else child.kill();
 }
 
 /** Open `url` in a new tab and answer a handle to it. */
