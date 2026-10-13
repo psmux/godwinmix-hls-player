@@ -122,7 +122,9 @@ class HlsPlayerPanel extends HTMLElement {
       }
       card.update(link);
       card.node.hidden = !link.path;
-      this.list.append(card.node);
+      // Moving a node that is already there would disconnect its preview and
+      // start the stream again, so a card is appended once.
+      if (card.node.parentNode !== this.list) this.list.append(card.node);
     }
     for (const [key, card] of this.cards) {
       if (seen.has(key)) continue;

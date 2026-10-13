@@ -48,8 +48,10 @@ export async function open(port, url, { width = 1280, height = 720 } = {}) {
   const waiting = new Map();
   const logs = [];
   const failures = [];
+  const handlers = new Map();
   socket.addEventListener("message", (ev) => {
     const m = JSON.parse(ev.data);
+    if (m.method && handlers.has(m.method)) handlers.get(m.method)(m.params);
     if (m.id && waiting.has(m.id)) {
       waiting.get(m.id)(m);
       waiting.delete(m.id);
@@ -79,6 +81,10 @@ export async function open(port, url, { width = 1280, height = 720 } = {}) {
     logs,
     failures,
     send,
+    /** Call `fn(params)` for every event named `method`. */
+    on(method, fn) {
+      handlers.set(method, fn);
+    },
     /** Run an expression in the page and answer its value. */
     async eval(expression) {
       const r = await send("Runtime.evaluate", { expression, awaitPromise: true, returnByValue: true });

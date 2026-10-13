@@ -130,6 +130,7 @@
         quality: q(".quality"), full: q(".full"),
       };
       this.hls = null;
+      this.session = 0;
       this.attempt = 0;
       this.timers = {};
       this.state = "idle";
@@ -194,10 +195,13 @@
       var self = this;
       clearTimeout(this.timers.retry);
       this.opened = true;
+      // hls.js may still be loading when the source changes; only the latest
+      // open may attach, or two instances would feed one video.
+      var session = ++this.session;
       this.video.preload = "auto";
       if (hasMse()) {
         loadHls(this.getAttribute("hls-src") ? new URL(".", safeUrl(this.getAttribute("hls-src"))).href : BASE)
-          .then(function (Hls) { if (self.opened) self.openHls(Hls); })
+          .then(function (Hls) { if (self.opened && session === self.session) self.openHls(Hls); })
           .catch(function (e) { self.setState("error", "The player could not load hls.js: " + e.message); });
       } else if (this.video.canPlayType("application/vnd.apple.mpegurl")) {
         this.native = true;
@@ -214,6 +218,7 @@
       var hls = new Hls({
         lowLatencyMode: true,
         enableWorker: !this.hasAttribute("no-worker"),
+        debug: this.hasAttribute("debug"),
         backBufferLength: 30,
         manifestLoadingMaxRetry: 1,
         levelLoadingMaxRetry: 2,
@@ -317,6 +322,7 @@
       clearTimeout(this.timers.retry);
       clearTimeout(this.timers.idle);
       this.opened = false;
+      this.session += 1;
       if (this.hls) {
         this.hls.destroy();
         this.hls = null;
@@ -372,6 +378,11 @@
       this.state = state;
       this.ui.state.textContent = text || "";
       this.setAttribute("data-state", state);
+      if (state === "offline" || state === "error") {
+        this.ui.live.removeAttribute("data-on");
+        this.ui.lbl.textContent = "OFFLINE";
+        this.ui.lat.textContent = "";
+      }
       this.dispatchEvent(new CustomEvent("statechange", { detail: { state: state, text: text || "" } }));
     }
 
