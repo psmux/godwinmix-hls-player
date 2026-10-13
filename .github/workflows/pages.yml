@@ -1,0 +1,38 @@
+name: pages
+
+# Publishes ui/ at https://psmux.github.io/godwinmix-hls-player/ so any site
+# can embed player.html or player.js from there.
+
+on:
+  push:
+    branches: [main]
+    paths: ["ui/**", ".github/workflows/pages.yml"]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Leave the mixer's panel files out of the public site
+        run: |
+          mkdir site
+          cp -R ui/. site/
+          rm -f site/panel.js site/panel-card.js site/panel.json site/links.js
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: site
+      - id: deployment
+        uses: actions/deploy-pages@v4

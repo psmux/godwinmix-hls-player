@@ -13,7 +13,7 @@
   var VERSION = "1.0.0";
   var SCRIPT = document.currentScript;
   var BASE = SCRIPT && SCRIPT.src ? new URL(".", SCRIPT.src).href : new URL(".", location.href).href;
-  var HLS_FILE = "vendor/hls.light.min.js";
+  var HLS_FILE = "vendor/hls.min.js";
   var RETRY_STEPS = [1, 2, 4, 8, 10];
   var STALL_SECONDS = 15;
   var hlsPromise = null;

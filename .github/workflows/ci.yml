@@ -1,0 +1,21 @@
+name: tests
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Unit tests
+        run: node --test tests/*.test.mjs
+      - name: The manifest parses and names the files it points at
+        run: python3 tools/check_manifest.py
+      - name: The release archives build
+        run: tools/package.sh

@@ -1,0 +1,99 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="referrer" content="no-referrer">
+<title>HLS Player for any website</title>
+<style>
+  body { margin: 0; font: 16px/1.5 system-ui, -apple-system, "Segoe UI", sans-serif; color: #1d1d1f; background: #f6f6f4; }
+  main { max-width: 860px; margin: 0 auto; padding: 24px 18px 60px; }
+  h1 { font-size: 1.7em; margin: .2em 0; }
+  label { display: block; font-weight: 600; margin-top: 12px; }
+  input[type=url], input[type=text] { width: 100%; box-sizing: border-box; font: inherit; padding: 8px; border: 1px solid #bbb; border-radius: 6px; }
+  .row { display: flex; gap: 16px; flex-wrap: wrap; margin-top: 10px; }
+  .row label { display: inline-flex; gap: 6px; font-weight: 400; margin: 0; }
+  textarea { width: 100%; box-sizing: border-box; font: 13px/1.4 ui-monospace, Consolas, monospace; padding: 8px; border-radius: 6px; border: 1px solid #bbb; }
+  button { font: inherit; padding: 6px 12px; border-radius: 6px; border: 1px solid #888; background: #fff; cursor: pointer; }
+  #stage { margin: 16px 0; }
+  code { background: #e9e9e6; padding: 1px 4px; border-radius: 4px; }
+  .note { color: #555; }
+</style>
+<script src="player.js" defer></script>
+</head>
+<body>
+<main>
+  <h1>HLS Player</h1>
+  <p>A live video player you can put on any web page, with an iframe or one script tag. It plays any HLS stream (a <code>.m3u8</code> address): a GodwinMix channel's watch link, a CDN, anything. It makes no request except the stream and sends nothing anywhere. Source and licence on <a href="https://github.com/psmux/godwinmix-hls-player">GitHub</a>.</p>
+
+  <form id="f" onsubmit="return false">
+    <label for="src">Stream address</label>
+    <input id="src" type="url" placeholder="https://example.com/live/index.m3u8" required>
+    <div class="row">
+      <label><input id="autoplay" type="checkbox" checked> Start playing by itself</label>
+      <label><input id="muted" type="checkbox" checked> Start muted</label>
+    </div>
+    <label for="title">Title</label>
+    <input id="title" type="text" placeholder="Sunday service">
+    <label for="poster">Poster image address</label>
+    <input id="poster" type="url" placeholder="https://example.com/poster.jpg">
+    <label for="width">Width</label>
+    <input id="width" type="text" placeholder="100% (or 640)">
+    <p><button id="try" type="button">Try it here</button></p>
+  </form>
+
+  <div id="stage"></div>
+
+  <h2>Iframe</h2>
+  <textarea id="iframe" rows="5" readonly aria-label="Iframe code"></textarea>
+  <p><button type="button" data-copy="iframe">Copy iframe code</button></p>
+  <h2>Script tag</h2>
+  <textarea id="script" rows="3" readonly aria-label="Script tag code"></textarea>
+  <p><button type="button" data-copy="script">Copy script tag code</button></p>
+
+  <h2>What the stream needs</h2>
+  <p class="note">The viewer's browser fetches the stream, so it has to be at an address the viewer can reach, over https when your site is https, and it has to answer with an <code>Access-Control-Allow-Origin</code> header. A GodwinMix watch link sends that header; a CDN or proxy in front of it has to keep it.</p>
+  <p class="note">Keys: Space or K plays and pauses, M mutes, F is full screen, L goes back to live.</p>
+</main>
+<script type="module">
+  import { iframeSnippet, scriptSnippet } from "./embed.js";
+  const $ = (id) => document.getElementById(id);
+  const base = new URL(".", location.href).href;
+  const read = () => ({
+    src: $("src").value.trim() || "https://example.com/live/index.m3u8",
+    autoplay: $("autoplay").checked,
+    muted: $("muted").checked,
+    title: $("title").value.trim(),
+    poster: $("poster").value.trim(),
+    width: $("width").value.trim(),
+  });
+  const draw = () => {
+    $("iframe").value = iframeSnippet(read(), base);
+    $("script").value = scriptSnippet(read(), base);
+  };
+  $("f").addEventListener("input", draw);
+  $("try").addEventListener("click", () => {
+    const o = read();
+    const p = document.createElement("godwinmix-player");
+    if (o.autoplay) p.setAttribute("autoplay", "");
+    if (o.muted) p.setAttribute("muted", "");
+    if (o.title) p.setAttribute("title", o.title);
+    if (o.poster) p.setAttribute("poster", o.poster);
+    p.setAttribute("src", o.src);
+    $("stage").replaceChildren(p);
+  });
+  for (const b of document.querySelectorAll("[data-copy]")) {
+    b.addEventListener("click", async () => {
+      const area = $(b.dataset.copy);
+      try { await navigator.clipboard.writeText(area.value); } catch { area.select(); document.execCommand("copy"); }
+      const was = b.textContent;
+      b.textContent = "Copied";
+      setTimeout(() => (b.textContent = was), 1500);
+    });
+  }
+  const given = new URLSearchParams(location.search).get("src");
+  if (given) $("src").value = given;
+  draw();
+</script>
+</body>
+</html>
