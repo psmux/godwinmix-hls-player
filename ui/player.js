@@ -287,12 +287,12 @@
     /** Once a second while open: the latency readout and the stall check. */
     watch() {
       var self = this;
-      var last = -1;
+      var last = this.video.currentTime;
       var still = 0;
       clearInterval(this.timers.watch);
       this.timers.watch = setInterval(function () {
         var t = self.video.currentTime;
-        var moving = t !== last && !self.video.paused;
+        var moving = t > last && !self.video.paused && self.video.readyState > 2;
         if (moving) {
           still = 0;
           self.attempt = 0;

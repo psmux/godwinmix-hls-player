@@ -18,7 +18,7 @@ const HERE = dirname(fileURLToPath(import.meta.url));
 const UI = resolve(HERE, "../../ui");
 
 function args() {
-  const a = { mixer: "http://127.0.0.1:22801", channel: "web-stream", cdp: 22860, serve: 22850, profile: resolve(HERE, "../../.live/chrome") };
+  const a = { mixer: "http://127.0.0.1:22801", channel: "web-stream", link: "watch-link", cdp: 22860, serve: 22850, profile: resolve(HERE, "../../.live/chrome") };
   const argv = process.argv.slice(2);
   for (let i = 0; i < argv.length; i++) {
     const k = argv[i].replace(/^--/, "");
@@ -36,21 +36,25 @@ function report(ok, what, detail = "") {
   if (!ok) failed += 1;
 }
 
-/** channel.set over the REST layer, the way any client would. */
-async function setFeed(kind) {
-  const res = await fetch(`${opts.mixer}/api/v1/channels/${opts.channel}/set`, {
+/**
+ * Switch the watch link off or on with channel.destination.set over the REST
+ * layer, the way any client would. Off, the link answers 404 like a stream
+ * that is not on air.
+ */
+async function setLink(enabled) {
+  const res = await fetch(`${opts.mixer}/api/v1/channels/${opts.channel}/destination`, {
     method: "POST",
     headers: { "content-type": "application/json" },
-    body: JSON.stringify({ feed: { kind } }),
+    body: JSON.stringify({ destination: opts.link, enabled }),
   });
-  if (!res.ok) throw new Error(`channel.set answered ${res.status}: ${await res.text()}`);
+  if (!res.ok) throw new Error(`channel.destination.set answered ${res.status}: ${await res.text()}`);
 }
 
 async function watchLink() {
   const list = await (await fetch(`${opts.mixer}/api/v1/channels`)).json();
   const ch = list.channels.find((c) => c.id === opts.channel);
   if (!ch) throw new Error(`the mixer has no channel ${opts.channel}`);
-  const d = (ch.destinations || []).find((x) => x.platform === "hls" && x.playback);
+  const d = (ch.destinations || []).find((x) => x.id === opts.link && x.playback);
   if (!d) throw new Error(`channel ${opts.channel} has no watch link`);
   return new URL(d.playback.master_url_path, opts.mixer).href;
 }
@@ -68,7 +72,9 @@ const READ = (sel) => `(() => {
 /** Frames are playing when currentTime moves on by most of the time waited. */
 async function plays(page, sel, label) {
   try {
-    await page.until(`(${READ(sel)} || {}).t > 0.5`, 30000, `${label} to start`);
+    await page.until(`(() => { const r = ${READ(sel)}; return r && r.t > 0.5 && r.state === 'playing'; })()`, 30000, `${label} to start`);
+    // Starting at the live edge is a seek; give it a second to settle.
+    await sleep(1000);
   } catch (e) {
     report(false, `${label} plays`, `${e.message}; ${JSON.stringify(await page.eval(READ(sel)))} ${page.logs.slice(-3).join(" | ")}`);
     return null;
@@ -120,26 +126,26 @@ async function playerChecks(src) {
   await bad.close();
 }
 
-/** The feed goes away and comes back; the player has to say so and recover. */
+/** The stream goes off the air and comes back; the player has to say so and recover. */
 async function offlineCheck(page, sel) {
-  await setFeed("encoder");
+  await setLink(false);
   let seen = "";
   try {
-    seen = await page.until(`(() => { const r = ${READ(sel)}; return r && /Offline|Reconnecting|Buffering/.test(r.text) ? r.text : ""; })()`, 60000, "the offline state");
-    report(true, "a stopped feed shows as offline or reconnecting", seen);
+    seen = await page.until(`(() => { const r = ${READ(sel)}; return r && /Offline|Reconnecting/.test(r.text) ? r.text : ""; })()`, 60000, "the offline state");
+    report(true, "a stream gone off the air shows as offline or reconnecting", seen);
   } catch (e) {
-    report(false, "a stopped feed shows as offline or reconnecting", e.message);
+    report(false, "a stream gone off the air shows as offline or reconnecting", e.message);
   }
   if (opts.shots) await page.shot(join(opts.shots, "offline.png"));
-  await setFeed("programme");
+  await setLink(true);
   try {
     await page.until(`(() => { const r = ${READ(sel)}; return r && r.state === 'playing'; })()`, 90000, "playing again");
     const a = await page.eval(READ(sel));
     await sleep(4000);
     const b = await page.eval(READ(sel));
-    report(b.t - a.t > 2, "it plays again by itself once the feed is back", `currentTime ${a.t.toFixed(1)} -> ${b.t.toFixed(1)}`);
+    report(b.t - a.t > 2, "it plays again by itself once the stream is back", `currentTime ${a.t.toFixed(1)} -> ${b.t.toFixed(1)}`);
   } catch (e) {
-    report(false, "it plays again by itself once the feed is back", e.message);
+    report(false, "it plays again by itself once the stream is back", e.message);
   }
 }
 
