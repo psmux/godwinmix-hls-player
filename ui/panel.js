@@ -117,7 +117,7 @@ class HlsPlayerPanel extends HTMLElement {
       seen.add(link.key);
       let card = this.cards.get(link.key);
       if (!card) {
-        card = linkCard(link, { localBase: location.origin + "/", options: () => this.options(), onPreview: (c) => this.only(c) });
+        card = linkCard(link, { localBase: location.origin + "/", playerHere: HERE, options: () => this.options(), onPreview: (c) => this.only(c) });
         this.cards.set(link.key, card);
       }
       card.update(link);

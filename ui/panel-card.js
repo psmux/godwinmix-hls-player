@@ -42,7 +42,7 @@ function copyButton(label, area) {
 
 /**
  * A card for `link` ({channel, name, destination, path, state, error}).
- * `env` is {localBase, options(), onPreview(card)}; `options()` answers the
+ * `env` is {localBase, playerHere, options(), onPreview(card)}; `options()` answers the
  * shared form's values at the moment of drawing.
  */
 export function linkCard(link, env) {
@@ -95,10 +95,12 @@ export function linkCard(link, env) {
       const src = new URL(link.path, o.publicBase || env.localBase).href;
       const opts = { src, autoplay: o.autoplay, muted: o.muted, poster: o.poster, title: o.title || link.channelName, width: o.width };
       address.textContent = src;
-      open.href = playerUrl(opts, o.playerBase);
+      const r = reachability(src);
+      // A public page may not fetch from this network, so a link that only
+      // works here opens in the mixer's own copy of the player.
+      open.href = r.public ? playerUrl(opts, o.playerBase) : playerUrl({ ...opts, src: new URL(link.path, env.localBase).href }, env.playerHere);
       iframeArea.value = iframeSnippet(opts, o.playerBase);
       scriptArea.value = scriptSnippet(opts, o.playerBase);
-      const r = reachability(src);
       reach.textContent = r.public ? "This address can be reached from the internet, as far as its name tells. The stream still has to send CORS headers (the mixer does)." : r.why;
       reach.classList.toggle("hlsp-warn", !r.public);
       state.textContent = link.state === "live" ? "Live" : link.error || link.state || "";

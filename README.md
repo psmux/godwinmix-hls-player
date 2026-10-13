@@ -104,10 +104,17 @@ fetches the playlist from another origin, so the stream must send
 on its watch links and answers the preflight. A proxy or CDN in front of the
 mixer has to pass that header on, or add its own.
 
+**A page from the internet cannot reach into your network.** Chrome and Edge
+stop a public page from fetching a private address such as `192.168.1.20`, so
+the hosted player cannot play a watch link at its network address even on a
+computer in the same building. That is why the panel's **Open the player**
+opens such a link in the mixer's own copy of the player
+(`/plugins/hls-player/ui/player.html` on the mixer) instead.
+
 ## Host the player yourself
 
-The `ui` folder is the whole player: `player.html`, `player.js`, `embed.js` and
-`vendor/`. Copy those to any web server and use that address in place of
+The `ui` folder is the whole player: `player.html`, `player-page.js`,
+`player.js`, `embed.js` and `vendor/`. Copy those to any web server and use that address in place of
 `https://psmux.github.io/godwinmix-hls-player/`. The panel's **Player address**
 box changes the address the code points at.
 

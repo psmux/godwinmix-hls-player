@@ -120,6 +120,12 @@ async function playerChecks(src) {
   if (opts.shots) await embed.shot(join(opts.shots, "embed.png"));
   await embed.close();
 
+  // The mixer's own copy, under its Content-Security-Policy, which is what
+  // the panel's Open the player link uses for a link on this network only.
+  const own = await open(opts.cdp, `${opts.mixer}/plugins/hls-player/ui/player.html?autoplay=1&src=${encodeURIComponent(new URL(src).pathname + new URL(src).search)}`);
+  await plays(own, "document.querySelector('godwinmix-player')", "the mixer's own copy of player.html");
+  await own.close();
+
   const bad = await open(opts.cdp, `${base}player.html?src=${encodeURIComponent("javascript:alert(1)")}`);
   const said = await bad.until(`document.querySelector('.problem') && document.querySelector('.problem').textContent`, 10000);
   report(/not an http or https URL/.test(said), "a script URL in src is refused with a sentence", said);
@@ -140,10 +146,12 @@ async function offlineCheck(page, sel) {
   await setLink(true);
   try {
     await page.until(`(() => { const r = ${READ(sel)}; return r && r.state === 'playing'; })()`, 90000, "playing again");
-    const a = await page.eval(READ(sel));
+    // A link that has just come back has one or two segments; let it fill.
     await sleep(4000);
+    const a = await page.eval(READ(sel));
+    await sleep(6000);
     const b = await page.eval(READ(sel));
-    report(b.t - a.t > 2, "it plays again by itself once the stream is back", `currentTime ${a.t.toFixed(1)} -> ${b.t.toFixed(1)}`);
+    report(b.t - a.t > 4, "it plays again by itself once the stream is back", `currentTime ${a.t.toFixed(1)} -> ${b.t.toFixed(1)} in 6 s, state ${b.state}`);
   } catch (e) {
     report(false, "it plays again by itself once the stream is back", e.message);
   }
